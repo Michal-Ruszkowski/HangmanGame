@@ -208,7 +208,7 @@ namespace Hangman
         {
             Console.WriteLine("Whats's your name?");
             name = Console.ReadLine();
-            string path = "high_scores.txt";
+            string path = @"high_scores.txt";
             StreamWriter sw;
             DateTime thisDay = DateTime.Today;
             try
