@@ -17,7 +17,7 @@ namespace Hangman
         private string _guessedCapital;
         private string _country;
         private List<char> _lettersWhichPlayerEnteredIncorrect;
-        private int _guessingTries = 0;
+        private int _guessingTries;
         private string _playerName;
 
         private string GetDataSetToGuessFromFile()
@@ -39,6 +39,7 @@ namespace Hangman
 
         private void SetBaseGameVariables()
         {
+            _guessingTries = 0;
             _lives = Lives;
             string[] words = GetDataSetToGuessFromFile().Split(" | ");
             _lettersWhichPlayerEnteredIncorrect = new List<char>();
@@ -207,7 +208,7 @@ namespace Hangman
                 _endGameDateTime = DateTime.Now;
                 _guessingTime = _endGameDateTime - _startGameDateTime;
                 Console.WriteLine();
-                Console.WriteLine("You guessed the capital after " + _guessingTries + " letters. It took you " + _guessingTime);
+                Console.WriteLine("You guessed the capital after " + _guessingTries + " tries. It took you " + _guessingTime);
                 SaveHighScore();
             }
             string userAction;
@@ -252,7 +253,7 @@ namespace Hangman
                 Console.WriteLine(e.Message);
             }
         }
-
+        
         public void Play()
         {
             InitGame();
