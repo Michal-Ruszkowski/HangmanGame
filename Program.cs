@@ -1,40 +1,62 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace Hangman
 {
     class HangmanGame
     {
         public int Lives { get; set; }
-        private int guessing_tries = 0;
-        private string country { get; set; }
-        private string guessed_word { get; set; }
-        private List<char> notInWord = new List<char>();
-        private string hiddenWord = "";
-        private DateTime data1;
-        private DateTime data2;
-        private TimeSpan guessing_time;
-        private string name = "";
 
-        public HangmanGame(string word)
+        private DateTime _startGameDateTime;
+        private DateTime _endGameDateTime;
+        private TimeSpan _guessingTime;
+
+        private int _lives;
+        private string _hiddenWord;
+        private string _guessedCapital;
+        private string _country;
+        private List<char> _lettersWhichPlayerEnteredIncorrect;
+        private int _guessingTries = 0;
+        private string _playerName;
+
+        private string GetDataSetToGuessFromFile()
         {
-            string[] words = word.Split(" | ");
-            guessed_word = words[1].ToUpper();
-            country = words[0];
+            string path = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName, @"RequiredFiles\countries_and_capitals.txt");
+
+            StreamReader fileWithCauntriesAndCapitols = File.OpenText(path);
+            List<string> readedLines = new List<string>();
+            string readedLine;
+            while ((readedLine = fileWithCauntriesAndCapitols.ReadLine()) != null)
+            {
+                readedLines.Add(readedLine);
+            }
+            Random generator = new Random();
+            int randomNumber = generator.Next(readedLines.Count);
+            string countryAndCapitalSet = readedLines[randomNumber];
+            return countryAndCapitalSet;
+        }
+
+        private void SetBaseGameVariables()
+        {
+            _lives = Lives;
+            string[] words = GetDataSetToGuessFromFile().Split(" | ");
+            _lettersWhichPlayerEnteredIncorrect = new List<char>();
+            _guessedCapital = words[1].ToUpper();
+            _country = words[0];
         }
 
         private string HideWord()
         {
-            foreach (char sign in guessed_word)
+            _hiddenWord = "";
+            foreach (char sign in _guessedCapital)
             {
                 if (sign == ' ')
-                    hiddenWord += sign;
+                    _hiddenWord += sign;
                 else
-                    hiddenWord += "_";
+                    _hiddenWord += "_";
             }
-            return hiddenWord;
+            return _hiddenWord;
         }
 
         private void ShowStartScreen()
@@ -45,22 +67,22 @@ namespace Hangman
         private void ShowWordInCorrectStateAndLives()
         {
             Console.WriteLine();
-            Console.WriteLine("Secret word: " + hiddenWord);
-            Console.WriteLine("Your lives: " + Lives);
+            Console.WriteLine("Secret word: " + _hiddenWord);
+            Console.WriteLine("Your lives: " + _lives);
             Console.Write("Not in word: ");
-            foreach (char letter in notInWord)
+            foreach (char letter in _lettersWhichPlayerEnteredIncorrect)
             {
                 Console.Write(letter + ", ");
             }
             Console.WriteLine();
-            if (Lives == 1)
+            if (_lives == 1)
             {
-                Console.WriteLine("The capital of " + country);
+                Console.WriteLine("The capital of " + _country);
             }
             Console.WriteLine();
         }
 
-        private void GetUserInput()
+        private void GetPlayerInput()
         {
             string userAction;
             do
@@ -76,76 +98,81 @@ namespace Hangman
             {
                 GetUserPassword();
             }
-            guessing_tries++;
+            _guessingTries++;
         }
         private void GetUserLetter()
         {
-            string userInput;
+            string playerInput;
             do
             {
                 Console.WriteLine("Enter one letter");
-                userInput = Console.ReadLine();
-            } while (userInput.Length != 1 || userInput == "_");
-            string inputUpper = userInput.ToUpper();
-            char letter = Convert.ToChar(inputUpper);
-            CheckLetter(letter);
+                playerInput = Console.ReadLine().ToUpper();
+            } while (playerInput.Length != 1 || playerInput == "_");
+
+            char letter = Convert.ToChar(playerInput);
+            CheckIsLetterInGuessingWord(letter);
         }
 
         private void GetUserPassword()
         {
-            string userInput;
             Console.WriteLine("Enter the password");
-            userInput = Console.ReadLine();
-            string inputUpper = userInput.ToUpper();
-            CheckPassword(inputUpper);
+            string playerInput = Console.ReadLine().ToUpper();
+            CheckPassword(playerInput);
         }
-        private void CheckLetter(char userInput)
+
+        private void CheckIsLetterInGuessingWord(char playerInput)
         {
             bool isLetterInWord = false;
-            char[] hiddenWordAsChars = hiddenWord.ToCharArray();
+            char[] hiddenWordAsChars = _hiddenWord.ToCharArray();
             int index = 0;
-            foreach (char letter in guessed_word)
+            int letterOccuranceCounter = 0;
+            foreach (char letter in _guessedCapital)
             {
-                if (userInput == letter)
+                if (playerInput == letter)
                 {
-                    Console.WriteLine("That was lucky.");
-                    if (hiddenWordAsChars[index] == userInput)
+                    letterOccuranceCounter++;
+                    if (letterOccuranceCounter == 1)
                     {
-                        Console.WriteLine("This letter you already guessed. I'll take one of your live.");
-                        Lives--;
+                        Console.WriteLine("That was lucky.");
+                        if (hiddenWordAsChars[index] == playerInput || _lettersWhichPlayerEnteredIncorrect.Contains(playerInput))
+                        {
+                            Console.WriteLine("This letter you already tried. I'll take one of your live.");
+                            _lives--;
+                        }
                     }
                     isLetterInWord = true;
-                    hiddenWordAsChars[index] = userInput;
+                    hiddenWordAsChars[index] = playerInput;
                 }
                 index++;
             }
-            hiddenWord = new string(hiddenWordAsChars);
             if (!isLetterInWord)
             {
                 Console.WriteLine("You are closer to death.");
-                Lives--;
-                notInWord.Add(userInput);
+                if (!_lettersWhichPlayerEnteredIncorrect.Contains(playerInput))
+                    _lettersWhichPlayerEnteredIncorrect.Add(playerInput);
+                _lives--;
             }
+            _hiddenWord = new string(hiddenWordAsChars);
         }
 
         private void CheckPassword(string userInput)
         {
-            if (userInput == guessed_word)
+            if (userInput == _guessedCapital)
             {
-                hiddenWord = guessed_word;
+                _hiddenWord = _guessedCapital;
                 Console.WriteLine("That was lucky.");
                 IsGameEnded();
             }
-            else if (userInput != guessed_word)
+            else if (userInput != _guessedCapital)
             {
                 Console.WriteLine("You are closer to death.");
-                Lives -= 2;
+                _lives -= 2;
             }
         }
 
         private bool IsGameEnded()
         {
-            if (Lives < 1 || hiddenWord.IndexOf("_") == -1)
+            if (_lives < 1 || _hiddenWord.IndexOf("_") == -1)
                 return true;
             else
                 return false;
@@ -153,14 +180,10 @@ namespace Hangman
 
         private void InitGame()
         {
+            SetBaseGameVariables();
             HideWord();
             ShowStartScreen();
-            data1 = GetTimestamp(DateTime.Now);
-        }
-
-        private DateTime GetTimestamp(DateTime value)
-        {
-            return value;
+            _startGameDateTime = DateTime.Now;
         }
 
         private void Gameplay()
@@ -168,23 +191,23 @@ namespace Hangman
             while (!IsGameEnded())
             {
                 ShowWordInCorrectStateAndLives();
-                GetUserInput();
+                GetPlayerInput();
             }
         }
 
         private void ShowResult()
         {
-            if (Lives < 1)
+            if (_lives < 1)
             {
                 Console.WriteLine();
                 Console.WriteLine("YOU DIED");
             }
             else
             {
-                data2 = GetTimestamp(DateTime.Now);
-                guessing_time = data2 - data1;
+                _endGameDateTime = DateTime.Now;
+                _guessingTime = _endGameDateTime - _startGameDateTime;
                 Console.WriteLine();
-                Console.WriteLine("You guessed the capital after " + guessing_tries + " letters. It took you " + guessing_time);
+                Console.WriteLine("You guessed the capital after " + _guessingTries + " letters. It took you " + _guessingTime);
                 SaveHighScore();
             }
             string userAction;
@@ -196,7 +219,7 @@ namespace Hangman
             while (userAction != "y" && userAction != "n");
             if (userAction == "y")
             {
-                StartGame();
+                Play();
             }
             else if (userAction == "n")
             {
@@ -207,8 +230,8 @@ namespace Hangman
         private void SaveHighScore()
         {
             Console.WriteLine("Whats's your name?");
-            name = Console.ReadLine();
-            string path = @"high_scores.txt";
+            _playerName = Console.ReadLine();
+            string path = Path.Combine(Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.FullName, @"RequiredFiles\high_scores.txt");
             StreamWriter sw;
             DateTime thisDay = DateTime.Today;
             try
@@ -221,7 +244,7 @@ namespace Hangman
                 {
                     sw = new StreamWriter(path, true);
                 }
-                sw.WriteLine(name + " | " + thisDay + " | " + guessing_time + " | " + guessing_tries + " | " + guessed_word);
+                sw.WriteLine(_playerName + " | " + thisDay + " | " + _guessingTime + " | " + _guessingTries + " | " + _guessedCapital);
                 sw.Close();
             }
             catch (Exception e)
@@ -229,30 +252,12 @@ namespace Hangman
                 Console.WriteLine(e.Message);
             }
         }
-        
+
         public void Play()
         {
             InitGame();
             Gameplay();
             ShowResult();
-        }
-
-        private void StartGame()
-        {
-            string path = @"countries_and_capitals.txt";
-            StreamReader sr = File.OpenText(path);
-            List<string> passwords = new List<string>();
-            string password = "";
-            while ((password = sr.ReadLine()) != null)
-            {
-                passwords.Add(password);
-            }
-            Random generator = new Random();
-            int a = generator.Next(passwords.Count);
-            string word = passwords[a];
-            HangmanGame hangmanGame = new HangmanGame(word);
-            hangmanGame.Lives = 5;
-            hangmanGame.Play();
         }
     }
 
@@ -260,18 +265,7 @@ namespace Hangman
     {
         static void Main(string[] args)
         {
-            string path = @"countries_and_capitals.txt";
-            StreamReader sr = File.OpenText(path);
-            List<string> passwords = new List<string>();
-            string password = "";
-            while ((password = sr.ReadLine()) != null)
-            {
-                passwords.Add(password);
-            }
-            Random generator = new Random();
-            int a = generator.Next(passwords.Count);
-            string word = passwords[a];
-            HangmanGame hangmanGame = new HangmanGame(word);
+            HangmanGame hangmanGame = new HangmanGame();
             hangmanGame.Lives = 5;
             hangmanGame.Play();
         }
